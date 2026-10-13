@@ -1,0 +1,36 @@
+# Entornos Virtuales
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Streamlit (Credenciales y configuraciones locales)
+.streamlit/secrets.toml
+
+# Python / Caché
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Directorio de Datos (Ignorar archivos pero mantener la carpeta)
+data/*
+!data/.gitkeep
+*.csv
+*.xlsx
+*.json
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# Archivos de Sistema e IDEs
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
