@@ -84,9 +84,19 @@ def calculate_lag(df:pd.DataFrame, cols:list,periods:int=1)->pd.DataFrame:
     Calcula el valor rezagado (lag) de las columnas especificadas.
     """
     for col in cols:
-        df[col+f'_Lag{periods}'] = df[col].shift(periods)
+        df[col+f'_lag{periods}'] = df[col].shift(periods)
 
     df.drop(columns=cols, inplace=True)
     return df
 
 
+def calculate_return(df:pd.DataFrame, cols:list)->pd.DataFrame:
+    """
+    Convierte series de precios absolutos en retornos porcentuales
+    """
+    for col in cols:
+        df[col+'_return'] = df[col].pct_change()
+
+    df.drop(columns=cols, inplace=True)
+    return df
+    

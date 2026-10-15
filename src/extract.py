@@ -4,21 +4,13 @@ Modulo para extraer series temporales desde la API de FRED
 orientadas a la modelizacion del precio de Oro spot.
 """
 
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 import pandas as pd
 from fredapi import Fred
 import yfinance as yf
 
 from src.data_sources import fred_api_key
-
-# Mapeo de series clave: Series ID de FRED -> Nombre descriptivo de columna
-DEFAULT_GOLD_MACRO_SERIES: Dict[str, str] = {
-    "DFII10": "real_yield_10y",                 # 10-Year Treasury Inflation-Indexed Yield
-    "T10YIE": "breakeven_inflation_10y",        # 10-Year Breakeven Inflation Rate
-    "DTWEXBGS": "dxy_broad_goods",              # Trade Weighted U.S. Dollar Index
-    "DGS10": "treasury_10y_nominal",            # 10-Year Treasury Constant Maturity
-    "VIXCLS": "vix_index",                      # CBOE Volatility Index
-}
+from src.config import default_start_date, DEFAULT_GOLD_MACRO_SERIES, DEFAULT_PRICE_ASSETS
 
 
 def get_fred_client(api_key: Optional[str] = None) -> Fred:
@@ -31,9 +23,9 @@ def get_fred_client(api_key: Optional[str] = None) -> Fred:
     return Fred(api_key=key)
 
 
-def fetch_fred_series(
+def fetch_fred(
     series_map: Optional[Dict[str, str]] = None,
-    start_date: str = "2010-01-01",
+    start_date: str = default_start_date,
     end_date: Optional[str] = None,
     client: Optional[Fred] = None,
 ) -> pd.DataFrame:
@@ -44,7 +36,7 @@ def fetch_fred_series(
     ----------
     series_map : Dict[str, str], optional
         Diccionario {series_id_fred: nombre_columna}. Si es None usa DEFAULT_GOLD_MACRO_SERIES.
-    start_date : str, default '2010-01-01'
+    start_date : str
         Fecha inicial de consulta (formato YYYY-MM-DD).
     end_date : str, optional
         Fecha final de consulta. Si es None, trae hasta el dato mas reciente disponible.
@@ -88,65 +80,65 @@ def fetch_fred_series(
 
     return df
 
-def fetch_gold_spot_daily(
-    ticker: str = "GC=F",
-    start_date: str = "2020-01-01",
+
+def fetch_prices(
+    assets: Optional[Dict[str, str]] = None,
+    start_date: str = default_start_date,
     end_date: Optional[str] = None,
-) -> pd.Series:
+    interval: str = "1wk",
+) -> pd.DataFrame:
     """
-    Descarga el precio de cierre diario del oro (por defecto futuros continuos GC=F).
-    Alternativa para spot: 'GLD' (SPDR Gold Shares).
+    Descarga los precios de cierre para una coleccion de tickers desde Yahoo Finance.
+
+    Parameters
+    ----------
+    assets : Dict[str, str], optional
+        Mapeo {ticker_yfinance: nombre_columna}.
+        Por defecto usa {'GC=F': 'gold_price_usd', 'SPY': 'spy_price_usd'}.
+    start_date : str
+        Fecha inicial de consulta (YYYY-MM-DD).
+    end_date : str, optional
+        Fecha final de consulta. Si es None, descarga hasta la fecha actual.
+    interval : str, default '1wk'
+        Intervalo temporal de las velas ('1d', '1wk', '1mo').
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame indexado por fecha con una columna de precio de cierre por activo.
     """
+    if assets is None:
+        assets = DEFAULT_PRICE_ASSETS
+
+    tickers_list: List[str] = list(assets.keys())
+
     data = yf.download(
-        ticker,
+        tickers=tickers_list,
         start=start_date,
         end=end_date,
+        interval=interval,
         progress=False,
         auto_adjust=False,
     )
-    # Extraer precio de cierre
+
+    if data.empty:
+        raise ValueError("No se obtuvieron datos para los tickers solicitados.")
+
+    # Si se pide mas de un ticker, yfinance genera columnas MultiIndex: (Price, Ticker)
     if isinstance(data.columns, pd.MultiIndex):
-        s = data["Close"][ticker]
+        df_close = data["Close"].copy()
     else:
-        s = data["Close"]
+        # En caso de pasar un solo ticker en el diccionario
+        df_close = data[["Close"]].copy()
+        df_close.columns = tickers_list
 
-    s.name = "gold_price_usd"
-    s.index = pd.to_datetime(s.index)
-    return s
+    # Renombrar columnas segun el mapeo definido
+    df_close = df_close.rename(columns=assets)
 
+    # Filtrar solo las columnas solicitadas y formatear el indice
+    df_close = df_close[[name for name in assets.values() if name in df_close.columns]]
+    df_close.index = pd.to_datetime(df_close.index)
+    df_close.index.name = "date"
+    df_close.sort_index(inplace=True)
 
-def fetch_full_dataset(
-    start_date: str = "2020-01-01",
-    end_date: Optional[str] = None
-) -> pd.DataFrame:
-    """Extrae factores macro de FRED y precio de Oro de Yahoo Finance."""
-    # 1. Factores Macro
-    df_macro = fetch_fred_series(
-        series_map=DEFAULT_GOLD_MACRO_SERIES,
-        start_date=start_date,
-        end_date=end_date
-    )
-
-    # 2. Target Oro (GC=F continuo)
-    s_gold = fetch_gold_spot_daily(
-        ticker="GC=F",
-        start_date=start_date,
-        end_date=end_date
-    )
-
-    # 3. Concatenar y alinear indices temporales
-    df_merged = df_macro.join(s_gold, how="outer")
-    df_merged.index.name = "date"
-    df_merged.sort_index(inplace=True)
-
-    return df_merged
-
-
-if __name__ == "__main__":
-    # Prueba rapida de ejecucion
-    df_raw = fetch_full_dataset(start_date="2020-01-01")
-    print("\nShape:", df_raw.shape)
-    print("\nPrimeras filas:")
-    print(df_raw.head())
-    print("\nValores nulos por serie:")
-    print(df_raw.isna().sum())
+    return df_close
