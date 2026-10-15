@@ -100,3 +100,28 @@ def calculate_return(df:pd.DataFrame, cols:list)->pd.DataFrame:
     df.drop(columns=cols, inplace=True)
     return df
     
+
+# Transformations
+
+def log_transform(df: pd.DataFrame, cols: list, calculation_1p: bool = False) -> pd.DataFrame:
+    """
+    Aplica la transformación logarítmica a las columnas especificadas del DataFrame.
+    Se crea una nueva columna con el sufijo '_Log' o '_Log1p' y se elimina la columna original.
+    """
+    # Creamos una copia para no alterar el DataFrame original accidentalmente
+    df_out = df.copy()
+    
+    # Se define la función y el sufijo
+    if calculation_1p:
+        funcion_log = np.log1p
+        sufijo = '_log1p'
+    else:
+        funcion_log = np.log
+        sufijo = '_log'
+        
+    # Se aplica la función y elimina la columna original
+    for col in cols:
+        df_out[f'{col}{sufijo}'] = funcion_log(df_out[col])
+        df_out.drop(col, axis=1, inplace=True)
+        
+    return df_out

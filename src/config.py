@@ -1,6 +1,12 @@
 from typing import Dict
+from pathlib import Path
 
-default_start_date = "2020-01-01"
+# Ruta al fichero de datos
+data_folder = "data"
+clean_data_file = Path(data_folder) / "clean_data.parquet"
+
+# Fecha inicial para descargar datos
+default_start_date = "2010-01-01"
 
 # Mapeo de series macro: Series ID de FRED -> Nombre descriptivo de columna
 DEFAULT_GOLD_MACRO_SERIES: Dict[str, str] = {
