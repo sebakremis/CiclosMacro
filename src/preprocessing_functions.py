@@ -5,6 +5,50 @@ import seaborn as sns
 import plotly.express as px
 from sklearn.preprocessing import PowerTransformer
 
+
+# Processing
+
+def process_macro_to_monthly(
+    df_raw: pd.DataFrame, 
+    daily_columns: list[str], 
+    monthly_columns: list[str]
+) -> pd.DataFrame:
+    """
+    Remuestrea series mixtas (diarias y mensuales) a cierre de mes (ME)
+    aplicando lag de publicacion a las variables mensuales nativas.
+    """
+    # Bloque Diario -> ffill acotado por festivos y tomar cierre de mes
+    df_daily_m = (
+        df_raw[daily_columns]
+        .ffill(limit=5)
+        .resample("ME")
+        .last()
+    )
+
+    # Bloque Mensual Nativo -> descartar dias vacios y mover a fin de mes
+    df_monthly_native = df_raw[monthly_columns].dropna(how="all")
+    df_monthly_native.index = df_monthly_native.index + pd.offsets.MonthEnd(0)
+
+    # Unir ambos bloques
+    df_res = df_daily_m.join(df_monthly_native, how="inner")
+
+    # Lag de 1 mes de publicacion a las variables mensuales nativas (al 31 de Enero, el ultimo dato conocido es de Diciembre)
+    df_res = calculate_lag(df_res, cols= monthly_columns)
+
+    return df_res
+
+
+def drop_incomplete_month(df: pd.DataFrame) -> pd.DataFrame:
+    """Elimina la fila correspondiente al mes en curso si aun no ha finalizado."""
+    now = pd.Timestamp.now()
+    # Inicio del mes actual (ej. 2026-10-01 00:00:00)
+    current_month_start = pd.Timestamp(year=now.year, month=now.month, day=1)
+
+    # Conservar solo los registros fechados antes del inicio del mes en curso
+    # (Como el indice es MonthEnd, el mes previo estara en el ultimo dia del mes anterior)
+    df_closed = df[df.index < current_month_start].copy()
+    return df_closed
+
 # EDA
 
 def show_missings(df:pd.DataFrame)->pd.Series:
@@ -83,23 +127,35 @@ def calculate_lag(df:pd.DataFrame, cols:list,periods:int=1)->pd.DataFrame:
     """
     Calcula el valor rezagado (lag) de las columnas especificadas.
     """
+    df_out = df.copy()
     for col in cols:
-        df[col+f'_lag{periods}'] = df[col].shift(periods)
+        df_out[col+f'_lag{periods}'] = df_out[col].shift(periods)
 
-    df.drop(columns=cols, inplace=True)
-    return df
+    df_out.drop(columns=cols, inplace=True)
+    return df_out
 
 
-def calculate_return(df:pd.DataFrame, cols:list)->pd.DataFrame:
+def calculate_return(df:pd.DataFrame, cols:list, periods:int=1)->pd.DataFrame:
     """
-    Convierte series de precios absolutos en retornos porcentuales
+    Calcula las variaciones porcentuales
     """
+    df_out = df.copy()
     for col in cols:
-        df[col+'_return'] = df[col].pct_change()
+        df_out[f"{col}_ret_{periods}m"] = df_out[col].pct_change(periods, fill_method=None)
 
-    df.drop(columns=cols, inplace=True)
-    return df
-    
+    return df_out
+
+
+def calculate_delta(df:pd.DataFrame, cols:list, periods=1)->pd.DataFrame:
+    """
+    Calcula las variaciones absolutas
+    """
+    df_out = df.copy()
+    for col in cols:
+        df_out[f"{col}_change_{periods}m"] = df_out[col].diff(periods)
+
+    return df_out
+
 
 # Transformations
 
@@ -122,6 +178,24 @@ def log_transform(df: pd.DataFrame, cols: list, calculation_1p: bool = False) ->
     # Se aplica la función y elimina la columna original
     for col in cols:
         df_out[f'{col}{sufijo}'] = funcion_log(df_out[col])
+        df_out.drop(col, axis=1, inplace=True)
+        
+    return df_out
+
+
+def yeo_transform(df: pd.DataFrame, cols: list) -> pd.DataFrame:
+    """
+    Aplica la transformación de Yeo-Johnson a las columnas especificadas del DataFrame.
+    Se crea una nueva columna con el sufijo '_Yeo' y se elimina la columna original.
+    """
+    df_out = df.copy()
+
+    # Inicializar el PowerTransformer
+    pt = PowerTransformer(method='yeo-johnson', standardize=True)
+
+    # Se aplica la función y elimina la columna original
+    for col in cols:
+        df_out[f'{col}_Yeo'] = pt.fit_transform(df_out[[col]])
         df_out.drop(col, axis=1, inplace=True)
         
     return df_out

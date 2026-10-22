@@ -10,7 +10,7 @@ from fredapi import Fred
 import yfinance as yf
 
 from src.data_sources import fred_api_key
-from src.config import default_start_date, DEFAULT_GOLD_MACRO_SERIES, DEFAULT_PRICE_ASSETS
+from src.config import default_start_date, DEFAULT_MACRO_SERIES, DEFAULT_PRICE_ASSETS
 
 
 def get_fred_client(api_key: Optional[str] = None) -> Fred:
@@ -49,7 +49,7 @@ def fetch_fred(
         DataFrame con DatetimeIndex y cada serie en una columna, ordenado cronologicamente.
     """
     if series_map is None:
-        series_map = DEFAULT_GOLD_MACRO_SERIES
+        series_map = DEFAULT_MACRO_SERIES
 
     fred = client or get_fred_client()
     data_frames = []
@@ -83,62 +83,36 @@ def fetch_fred(
 
 def fetch_prices(
     assets: Optional[Dict[str, str]] = None,
-    start_date: str = default_start_date,
+    start_date: str = "2010-01-01",
     end_date: Optional[str] = None,
-    interval: str = "1wk",
 ) -> pd.DataFrame:
-    """
-    Descarga los precios de cierre para una coleccion de tickers desde Yahoo Finance.
-
-    Parameters
-    ----------
-    assets : Dict[str, str], optional
-        Mapeo {ticker_yfinance: nombre_columna}.
-        Por defecto usa {'GC=F': 'gold_price_usd', 'SPY': 'spy_price_usd'}.
-    start_date : str
-        Fecha inicial de consulta (YYYY-MM-DD).
-    end_date : str, optional
-        Fecha final de consulta. Si es None, descarga hasta la fecha actual.
-    interval : str, default '1wk'
-        Intervalo temporal de las velas ('1d', '1wk', '1mo').
-
-    Returns
-    -------
-    pd.DataFrame
-        DataFrame indexado por fecha con una columna de precio de cierre por activo.
-    """
+    """Descarga en diario y remuestrea a fin de mes uniforme (ME)."""
     if assets is None:
         assets = DEFAULT_PRICE_ASSETS
 
-    tickers_list: List[str] = list(assets.keys())
+    tickers = list(assets.keys())
 
     data = yf.download(
-        tickers=tickers_list,
+        tickers=tickers,
         start=start_date,
         end=end_date,
-        interval=interval,
+        interval="1d",
         progress=False,
         auto_adjust=False,
     )
 
-    if data.empty:
-        raise ValueError("No se obtuvieron datos para los tickers solicitados.")
-
-    # Si se pide mas de un ticker, yfinance genera columnas MultiIndex: (Price, Ticker)
     if isinstance(data.columns, pd.MultiIndex):
         df_close = data["Close"].copy()
     else:
-        # En caso de pasar un solo ticker en el diccionario
         df_close = data[["Close"]].copy()
-        df_close.columns = tickers_list
+        df_close.columns = tickers
 
-    # Renombrar columnas segun el mapeo definido
     df_close = df_close.rename(columns=assets)
 
-    # Filtrar solo las columnas solicitadas y formatear el indice
-    df_close = df_close[[name for name in assets.values() if name in df_close.columns]]
-    df_close.index = pd.to_datetime(df_close.index)
-    df_close.index.name = "date"
-    df_close.sort_index(inplace=True)
+    # 1. Resolver desajustes de festivos cruzados
+    df_close = df_close.ffill(limit=5)
 
-    return df_close
+    # 2. Resample a cierre de mes estandar (Month End)
+    df_monthly = df_close.resample("ME").last()
+    df_monthly.index.name = "date"
+    return df_monthly.dropna(how="all")
