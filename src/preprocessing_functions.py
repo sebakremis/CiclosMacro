@@ -195,7 +195,7 @@ def yeo_transform(df: pd.DataFrame, cols: list) -> pd.DataFrame:
 
     # Se aplica la función y elimina la columna original
     for col in cols:
-        df_out[f'{col}_Yeo'] = pt.fit_transform(df_out[[col]])
+        df_out[f'{col}_yeo'] = pt.fit_transform(df_out[[col]])
         df_out.drop(col, axis=1, inplace=True)
         
     return df_out

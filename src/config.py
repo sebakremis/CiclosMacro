@@ -16,18 +16,20 @@ DEFAULT_PRICE_ASSETS: Dict[str, str] = {
 }
 
 # Mapeo de series macro: Series ID de FRED -> Nombre descriptivo de columna
-# Factores financieros / mercado (diarios en origen)
+# Factores financieros / mercado (diarios o semanales en origen)
 DAILY_MACRO_SERIES: Dict[str, str] = {
-    "DFII10": "real_yield_10y",
-    "DTWEXBGS": "dxy_broad_goods",
-    "VIXCLS": "vix_index",
+    "DFII10": "real_yield_10y",                 # 10-Year Real Yield (Diaria)
+    "DTWEXBGS": "dxy_broad_goods",              # Trade Weighted USD (Diaria)
+    "VIXCLS": "vix_index",                      # CBOE Volatility Index (Diaria)
+    "STLFSI4": "st_louis_financial_stress",     # Financial Stress Index (Semanal -> cierre de mes)
 }
-
 # Pilares del ciclo económico fundamental (mensuales nativos en FRED)
 MONTHLY_MACRO_SERIES: Dict[str, str] = {
-    "INDPRO": "industrial_production",
-    "UNRATE": "unemployment_rate",
-    "CPIAUCSL": "cpi_headline",
+    "INDPRO": "industrial_production",          # Industrial Production (Mensual)
+    "UNRATE": "unemployment_rate",              # Unemployment Rate (Mensual)
+    "CPIAUCSL": "cpi_headline",                 # CPI Urban Consumers (Mensual)
+    "FEDFUNDS": "fed_funds_rate",               # Effective Federal Funds Rate (Mensual)
+    "M2SL": "m2_money_supply",                  # M2 Money Supply (Mensual)
 }
 
 # Diccionario consolidado
