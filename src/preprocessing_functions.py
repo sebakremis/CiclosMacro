@@ -1,3 +1,4 @@
+from typing import Optional
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -119,6 +120,97 @@ def show_asymmetry(df:pd.DataFrame):
     Muestra la asimetría de las columnas numéricas del DataFrame.
     """
     print(df.select_dtypes(include="number").skew().sort_values(ascending=False).to_string())
+
+
+def plot_correlation_matrix(
+    df: pd.DataFrame,
+    method: str = "spearman",
+    figsize: tuple = (16, 12),
+    cmap: str = "vlag",
+    annot: bool = True,
+    top_n_pairs: int = 10,
+    title: Optional[str] = None,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Calcula y grafica la matriz de correlación triangular para la fase EDA
+
+    de CiclosMacro, extrayendo además los pares más correlacionados.
+
+    Parámetros
+    ----------
+    df : pd.DataFrame
+        DataFrame con las 20 features macroeconómicas y de precios procesadas.
+    method : str, default 'spearman'
+        Método de correlación ('spearman' o 'pearson'). Spearman se recomienda
+        por la presencia de shocks de volatilidad no lineales (VIX, retornos).
+    figsize : tuple, default (16, 12)
+        Dimensiones de la figura de Matplotlib.
+    cmap : str, default 'vlag'
+        Paleta divergente centrada en cero (e.g. 'vlag', 'coolwarm',
+        'RdBu_r').
+    annot : bool, default True
+        Si se imprimen los coeficientes numéricos en cada celda.
+    top_n_pairs : int, default 10
+        Cantidad de pares de mayor correlación absoluta a reportar en tabla.
+    title : str, optional
+        Título del heatmap.
+
+    Retorna
+    -------
+    corr_matrix : pd.DataFrame
+        Matriz cuadrada de correlaciones completa.
+    top_pairs_df : pd.DataFrame
+        Ranking con los pares de variables más fuertemente correlacionados.
+    """
+    # Asegurar únicamente columnas numéricas
+    numeric_df = df.select_dtypes(include=[np.number])
+
+    # Calcular matriz de correlación
+    corr_matrix = numeric_df.corr(method=method)
+
+    # Generar máscara para el triángulo superior y diagonal
+    mask = np.triu(np.ones_like(corr_matrix, dtype=bool))
+
+    # Graficar Heatmap
+    plt.figure(figsize=figsize)
+    sns.heatmap(
+        corr_matrix,
+        mask=mask,
+        cmap=cmap,
+        vmax=1.0,
+        vmin=-1.0,
+        center=0.0,
+        annot=annot,
+        fmt=".2f",
+        square=True,
+        linewidths=0.5,
+        cbar_kws={"shrink": 0.8, "label": f"Correlación de {method.capitalize()}"},
+        annot_kws={"size": 8 if len(corr_matrix.columns) >= 20 else 10},
+    )
+
+    plot_title = (
+        title
+        if title
+        else f"CiclosMacro — Matriz de Correlación ({method.capitalize()})"
+    )
+    plt.title(plot_title, fontsize=14, weight="bold", pad=15)
+    plt.xticks(rotation=45, ha="right", fontsize=9)
+    plt.yticks(rotation=0, fontsize=9)
+    plt.tight_layout()
+    plt.show()
+
+    # Extraer ranking de pares con mayor correlación absoluta (sin duplicados ni diagonal)
+    pairs = (corr_matrix.where(~mask).stack().reset_index(name="correlation").rename(columns={"level_0": "feature_1", "level_1": "feature_2"})
+    )
+
+    pairs["abs_correlation"] = pairs["correlation"].abs()
+    top_pairs_df = (
+        pairs.sort_values(by="abs_correlation", ascending=False)
+        .drop(columns=["abs_correlation"])
+        .head(top_n_pairs)
+        .reset_index(drop=True)
+    )
+
+    return corr_matrix, top_pairs_df
 
 
 # Feature Engineering
