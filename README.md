@@ -106,10 +106,10 @@ CICLOSMACRO/
 │   ├── config.py                    # Configuración global del proyecto
 │   ├── data_sources.example.py      # Fichero ejemplo para gestionar la clave API de Fred
 │   ├── extract.py                   # Módulo de la fase de extracción
-│   ├── modeling_functions.py        # Módulo de la fase de modelado
-│   └── preprocessing_funcions.py    # Módulo de la fase preprocesado
+│   ├── modeling_functions.py        # Funciones para la fase de modelado
+│   └── preprocessing_funcions.py    # Funciones para la fase de pre-procesado
 ├── .gitignore                       # Reglas de git ignore
-├── 01_Preprocessing.ipynb           # Notebook del preprocesamiento de datos
+├── 01_Preprocessing.ipynb           # Notebook del pre-procesamiento de datos
 ├── 02_Modeling.ipynb                # Notebook de modelado
 ├── LICENSE                          # Licencia del proyecto
 ├── README.md                        # Descripción del proyecto
