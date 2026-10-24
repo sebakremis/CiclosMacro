@@ -2,6 +2,8 @@
 
 **CiclosMacro** es un pipeline cuantitativo no supervisado diseñado para identificar, clasificar y monitorear regímenes macroeconómicos y de mercado en Estados Unidos. El sistema combina técnicas de reducción de dimensionalidad (PCA) y modelos probabilísticos de mixturas gaussianas (GMM) para modelar dinámicas cíclicas complejas.
 
+![Gráfico de Evolución Temporal de Cíclos Macroeconómicos](./images/grafico_ciclos.png)
+
 ---
 
 ## 🎯 Objetivos del Proyecto
@@ -98,6 +100,7 @@ El modelo GMM configurado con covarianza diagonal (`covariance_type='diag'`) cla
 ```text
 CICLOSMACRO/
 ├── data/                            # Almacenamiento local de datasets
+├── images/                          # Gráficos
 ├── src/                             # Sub-directorio con los módulos de funciones auxiliares
 │   ├── __init__.py                  # Fichero vacío, inicializa la carpeta como paquete
 │   ├── config.py                    # Configuración global del proyecto
