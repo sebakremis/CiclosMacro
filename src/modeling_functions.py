@@ -7,17 +7,17 @@ import pandas as pd
 
 # Mapeo descriptivo y paleta semántica adaptada al perfil del modelo 3D
 DEFAULT_REGIME_NAMES: Dict[int, str] = {
-    0: "Sobrecalentamiento / Tensión",
-    1: "Expansión Sostenida (Goldilocks)",
-    2: "Endurecimiento Agresivo (Hiking)",
-    3: "Shock Recesivo & Rescate M2",
+    0: "Expansión Sostenida",
+    1: "Reflación Agresiva",
+    2: "Recesión Profunda",
+    3: "Sobrecalentamiento",
 }
 
 DEFAULT_REGIME_COLORS: Dict[int, str] = {
-    0: "#0055D4",  # Azul eléctrico / Cobalto: Tensión / Sobrecalentamiento
-    1: "#107C41",  # Verde bosque / Esmeralda: Expansión Sostenida (Goldilocks)
-    2: "#D97706",  # Ámbar dorado cálido / Amarillo ocre: Endurecimiento (Hiking)
-    3: "#D90429",  # Rojo rubí / Carmesí brillante: Shock Recesivo & Rescate M2
+    0: "#107C41",
+    1: "#0055D4",       
+    2: "#D90429",
+    3: "#D97706",  
 }
 
 
@@ -42,7 +42,7 @@ def plot_regimes_timeline(
     regime_series : pd.Series
         Serie con las etiquetas de cluster (0, 1, 2, 3) indexada por fecha.
     assets : list of str, optional
-        Columnas de df_prices a graficar. Por defecto ['spy', 'gold'].
+        Columnas de df_prices a graficar.
     regime_names : dict, optional
         Mapeo {id_cluster: 'Nombre descriptivo'}.
     regime_colors : dict, optional
@@ -56,16 +56,11 @@ def plot_regimes_timeline(
         Título superior de la figura.
     """
     if assets is None:
-        # Detectar columnas de spy y gold automáticamente si varían de nombre
+        # Detectar columna de spy automáticamente si varía de nombre
         possible_spy = [
             c for c in df_prices.columns if "spy" in c.lower()
         ]
-        possible_gold = [
-            c
-            for c in df_prices.columns
-            if "gold" in c.lower() or "gc=f" in c.lower()
-        ]
-        assets = [possible_spy[0], possible_gold[0]]
+        assets = [possible_spy[0]]
 
     names = regime_names or DEFAULT_REGIME_NAMES
     colors = regime_colors or DEFAULT_REGIME_COLORS

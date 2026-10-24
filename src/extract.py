@@ -83,7 +83,7 @@ def fetch_fred(
 
 def fetch_prices(
     assets: Optional[Dict[str, str]] = None,
-    start_date: str = "2010-01-01",
+    start_date: str = default_start_date,
     end_date: Optional[str] = None,
 ) -> pd.DataFrame:
     """Descarga en diario y remuestrea a fin de mes uniforme (ME)."""

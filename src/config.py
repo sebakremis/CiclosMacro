@@ -6,7 +6,7 @@ data_folder = "data"
 clean_data_file = Path(data_folder) / "clean_data.parquet"
 
 # Fecha inicial para descargar datos
-default_start_date = "2010-01-01"
+default_start_date = "2006-01-01"
 
 # Mapeo de series de precios
 DEFAULT_PRICE_ASSETS: Dict[str, str] = {
